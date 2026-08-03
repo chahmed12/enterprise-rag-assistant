@@ -14,10 +14,11 @@ def health_check():
     return {"status": "ok"}
 
 
+'''if not payload.question.strip():  Si la question est vide ou ne contient que des espaces'''
 
 @app.post("/ask", response_model=AnswerResponse)
 def ask_question(payload: QuestionRequest):
-    if not payload.question.strip():
+    if not payload.question.strip(): 
         raise HTTPException(status_code=400, detail="La question ne peut pas etre vide.")
     result = generate_answer(payload.question)
     return AnswerResponse(**result)

@@ -6,7 +6,6 @@ class SourceItem(BaseModel):
     page:Optional[int] = None
     score: Optional[float] = None
     
-    
 class QuestionRequest(BaseModel):
     question: str
 
@@ -18,4 +17,3 @@ class IngestResponse(BaseModel):
     file_name: str
     nb_passages: Optional[int] = None
     messages: str
-    
