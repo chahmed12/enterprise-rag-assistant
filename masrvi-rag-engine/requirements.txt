@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+langchain
+langchain-community
+langchain-huggingface
+langchain-qdrant
+langchain-groq
+langchain-ollama
+qdrant-client
+pypdf
+langchain-text-splitters
+docx2txt
