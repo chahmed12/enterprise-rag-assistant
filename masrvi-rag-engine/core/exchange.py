@@ -3,16 +3,21 @@ from app.models import SourceItem
 from retrieval.qdrant_client import search_passages
 from utils.clients import get_llm
 
-RAG_PROMPT_TEMPLATE = """Réponds à la question UNIQUEMENT à partir des passages ci-dessous.
-Si les passages ne contiennent pas la réponse, dis clairement que tu ne sais pas.
-Cite le document et la page dans ta réponse.
+RAG_PROMPT_TEMPLATE = """Tu es un assistant virtuel expert et rigoureux. Ton rôle est de répondre aux questions des utilisateurs en t’appuyant EXCLUSIVEMENT sur les extraits de documents fournis dans le contexte ci-dessous.
 
-Passages :
+--- RÈGLES À RESPECTER STRICTEMENT ---
+1. FIDÉLITÉ AU CONTEXTE : Réponds uniquement à l'aide des informations explicitement mentionnées dans le contexte. N'invente rien et n'utilise pas de connaissances externes.
+2. GESTION DE L'INCERTITUDE : Si la réponse ne se trouve pas dans le contexte ou si le contexte est insuffisant, réponds exactement : "Je ne trouve pas cette information dans les documents fournis."
+3. CITATION DES SOURCES : Chaque affirmation importante doit citer sa source exacte en utilisant le format : [Nom_Du_Document, Page X].
+4. FORMATAGE ET TON :
+   - Adopte un ton professionnel, synthétique et clair.
+   - Utilise du Markdown (listes à puces, gras) pour rendre la réponse facile à lire.
+
+--- CONTEXTE DOCUMENTAIRE ---
 {contexte}
 
-Question : {question}
-
-Réponse :"""
+--- QUESTION DE L'UTILISATEUR ---
+{question}"""
 
 def build_prompt(question: str, contexte: str) -> str:
     return RAG_PROMPT_TEMPLATE.format(question=question, contexte=contexte)

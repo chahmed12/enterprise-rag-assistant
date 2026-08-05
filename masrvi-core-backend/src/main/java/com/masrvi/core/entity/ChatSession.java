@@ -10,9 +10,11 @@ import java.util.List;
 @Table(name = "chat_sessions")
 @Getter
 @Setter
-// @ToString exclut "messages" pour éviter la boucle infinie (ChatSession → Message → ChatSession...)
+// @ToString exclut "messages" pour éviter la boucle infinie (ChatSession →
+// Message → ChatSession...)
 @ToString(exclude = "messages")
-// equals/hashCode uniquement sur l'id pour éviter le chargement lazy de toute la liste
+// equals/hashCode uniquement sur l'id pour éviter le chargement lazy de toute
+// la liste
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +23,7 @@ public class ChatSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include  // seul le id est utilisé pour comparer deux sessions
+    @EqualsAndHashCode.Include // seul le id est utilisé pour comparer deux sessions
     private Long id;
 
     private String title;

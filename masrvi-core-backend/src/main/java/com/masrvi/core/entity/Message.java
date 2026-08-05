@@ -12,8 +12,8 @@ import java.util.List;
 @Setter
 // Exclut les deux relations pour éviter les boucles infinies :
 // chatSession → Message.toString() → chatSession → ...
-// sources     → Source.toString()  → message    → ...
-@ToString(exclude = {"chatSession", "sources"})
+// sources → Source.toString() → message → ...
+@ToString(exclude = { "chatSession", "sources" })
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 @AllArgsConstructor

@@ -1,0 +1,53 @@
+# Compiled output
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Maven
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs and editors
+.idea/
+*.iws
+*.iml
+*.ipr
+.project
+.classpath
+.settings/
+.factorypath
+*.launch
+.springBeans
+.sts4-cache
+.apt_generated/
+.apt_generated_test/
+
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Logs
+*.log
+logs/
+spring.log
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+application-local.properties
+application-local.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+out/
+build/

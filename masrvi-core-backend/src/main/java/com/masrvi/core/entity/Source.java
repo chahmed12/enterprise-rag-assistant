@@ -7,7 +7,8 @@ import lombok.*;
 @Table(name = "sources")
 @Getter
 @Setter
-// Exclut "message" pour éviter la boucle : Source.toString() → Message.toString() → Source...
+// Exclut "message" pour éviter la boucle : Source.toString() →
+// Message.toString() → Source...
 @ToString(exclude = "message")
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @NoArgsConstructor
