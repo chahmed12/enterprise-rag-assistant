@@ -9,6 +9,9 @@ langchain-qdrant
 langchain-groq
 langchain-ollama
 qdrant-client
+pdfplumber
 pypdf
 langchain-text-splitters
 docx2txt
+pandas
+tabulate

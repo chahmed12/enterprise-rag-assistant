@@ -42,7 +42,7 @@ public class ChatService {
         // 3. Appeler le RAG Engine (FastAPI) hors transaction
         RagEngineClient.RagResponse ragResponse;
         try {
-            ragResponse = ragClient.ask(request.question());
+            ragResponse = ragClient.ask(request.question(), request.sourceFilter(), request.typeFilter());
         } catch (Exception e) {
             throw new RagEngineException("Erreur de communication avec le moteur RAG (IA indisponible).", e);
         }
@@ -59,6 +59,7 @@ public class ChatService {
                     .map(s -> Source.builder()
                             .documentName(s.documentName()) // Appel sur un record (parenthèses au lieu de get)
                             .page(s.page())
+                            .section(s.section())
                             .message(aiMessage)
                             .build())
                     .toList();
@@ -80,7 +81,7 @@ public class ChatService {
         List<SourceDTO> sourceDTOs = null;
         if (m.getSources() != null && !m.getSources().isEmpty()) {
             sourceDTOs = m.getSources().stream()
-                    .map(s -> new SourceDTO(s.getDocumentName(), s.getPage(), null))
+                    .map(s -> new SourceDTO(s.getDocumentName(), s.getPage(), null, s.getSection()))
                     .toList();
         }
         return new ChatMessageDTO(m.getId(), m.getRole(), m.getContent(), sourceDTOs);

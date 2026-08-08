@@ -22,8 +22,8 @@ RAG_PROMPT_TEMPLATE = """Tu es un assistant virtuel expert et rigoureux. Ton rô
 def build_prompt(question: str, contexte: str) -> str:
     return RAG_PROMPT_TEMPLATE.format(question=question, contexte=contexte)
 
-def generate_answer(question: str) -> dict:
-    resultats = search_passages(question)
+def generate_answer(question: str, source_filter: str = None, type_filter: str = None) -> dict:
+    resultats = search_passages(question, source_filter=source_filter, type_filter=type_filter)
 
     if not resultats or resultats[0][1] < config.RELEVANCE_THRESHOLD:
         return {
@@ -35,13 +35,14 @@ def generate_answer(question: str) -> dict:
         SourceItem(
             document_name=doc.metadata.get("source","Inconnu"),
             page=doc.metadata.get("page"),
-            score=round(score, 3)
+            score=round(score, 3),
+            section=doc.metadata.get("section")
         )
         for doc, score in resultats
     ]
 
     contexte = "\n\n".join(
-        f"[source:{doc.metadata.get('source')}, page {doc.metadata.get('page')}] \n{doc.page_content}"
+        f"[source:{doc.metadata.get('source')}, page {doc.metadata.get('page')}, section {doc.metadata.get('section', 'N/A')}] \n{doc.page_content}"
         for doc, score in resultats
     )
 
@@ -49,4 +50,4 @@ def generate_answer(question: str) -> dict:
     llm = get_llm()
     reponse = llm.invoke(prompt)
 
-    return {"reponse": reponse.content, "sources": [s.dict() for s in sources]}
+    return {"reponse": reponse.content, "sources": [s.model_dump() if hasattr(s, 'model_dump') else s.dict() for s in sources]}

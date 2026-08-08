@@ -5,7 +5,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 
 from core.process_document import process_file_task
 from core.exchange import generate_answer
-from app.models import QuestionRequest, AnswerResponse, IngestResponse
+from retrieval.qdrant_client import clear_collection
+from app.models import QuestionRequest, AnswerResponse, IngestResponse, ReloadResponse
 
 app = FastAPI(title="Masrvi RAG Service")
 
@@ -19,7 +20,11 @@ def health_check():
 def ask_question(payload: QuestionRequest):
     if not payload.question.strip():
         raise HTTPException(status_code=400, detail="La question ne peut pas etre vide.")
-    result = generate_answer(payload.question)
+    result = generate_answer(
+        payload.question,
+        source_filter=payload.source_filter,
+        type_filter=payload.type_filter
+    )
     return AnswerResponse(**result)
 
 
@@ -40,4 +45,22 @@ def ingest_document(background_tasks: BackgroundTasks, file: UploadFile = File(.
     return IngestResponse(
         file_name=file.filename,
         messages="Fichier en cours d'ingestion en arrière-plan.",
+    )
+
+
+@app.post("/reload", response_model=ReloadResponse)
+def reload_corpus(background_tasks: BackgroundTasks):
+    clear_collection()
+    
+    data_dir = "data"
+    count = 0
+    if os.path.exists(data_dir):
+        for filename in os.listdir(data_dir):
+            filepath = os.path.join(data_dir, filename)
+            if os.path.isfile(filepath):
+                background_tasks.add_task(process_file_task, filepath)
+                count += 1
+                
+    return ReloadResponse(
+        messages=f"Collection réinitialisée. {count} fichier(s) en cours de rechargement en arrière-plan."
     )

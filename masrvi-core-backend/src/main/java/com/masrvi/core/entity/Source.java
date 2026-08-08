@@ -28,6 +28,10 @@ public class Source {
     // La page (peut être null si la source est un fichier .txt sans pages)
     private Integer page;
 
+    // La section du document (ex: "Introduction", "Chapitre 2")
+    @Column
+    private String section;
+
     // Le message (réponse IA) auquel cette source est attachée
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "message_id", nullable = false)
