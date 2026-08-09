@@ -1,9 +1,11 @@
 import os
 import re
 from langchain_community.document_loaders import TextLoader, Docx2txtLoader
+from langchain_core.documents import Document
 from retrieval.semantic_chunker import chunk_documents
 from retrieval.qdrant_client import get_vector_store
 from utils.pdf_loaders import PandasPDFLoader
+import pymupdf4llm
 
 def clean_text(text: str) -> str:
     # Nettoyage des espaces multiples
@@ -30,8 +32,23 @@ def get_loader(filepath: str):
 
 def process_file_task(filepath: str):
     try:
-        loader = get_loader(filepath)
-        pages = loader.load()
+        ext = os.path.splitext(filepath)[1].lower()
+        if ext == ".pdf":
+            # page_chunks=True renvoie une liste de dictionnaires, un par page
+            md_pages = pymupdf4llm.to_markdown(filepath, page_chunks=True)
+            pages = []
+            for item in md_pages:
+                text = item.get("text", "")
+                meta = item.get("metadata", {})
+                
+                # On extrait la page (pymupdf4llm utilise généralement 'page' ou on peut indexer manuellement si besoin)
+                # S'il manque, on peut aussi utiliser l'index de la boucle
+                page_num = meta.get("page", len(pages) + 1)
+                
+                pages.append(Document(page_content=text, metadata={"source": filepath, "page": page_num}))
+        else:
+            loader = get_loader(filepath)
+            pages = loader.load()
         
         # Nettoyage avant découpage
         for page in pages:
@@ -40,20 +57,23 @@ def process_file_task(filepath: str):
         chunks = chunk_documents(pages)
         
         # Enrichissement des métadonnées
-        ext = os.path.splitext(filepath)[1].lower().replace(".", "")
+        clean_ext = ext.replace(".", "")
         for chunk in chunks:
-            chunk.metadata["type"] = ext
+            chunk.metadata["type"] = clean_ext
             
-            # Heuristique pour la section : première ligne si elle est courte
-            lines = chunk.page_content.split('\n')
-            if lines:
-                first_line = lines[0].strip()
-                if len(first_line) > 0 and len(first_line) < 100 and first_line[0].isupper():
-                    chunk.metadata["section"] = first_line
-                else:
-                    chunk.metadata["section"] = "Général"
-            else:
-                chunk.metadata["section"] = "Général"
+            # La section est désormais automatiquement extraite par le MarkdownHeaderTextSplitter
+            # On consolide cela dans la clé 'section' pour compatibilité avec l'existant.
+            section = "Général"
+            for h in ["Header 3", "Header 2", "Header 1"]:
+                if h in chunk.metadata:
+                    if section == "Général":
+                        # Récupérer le titre le plus profond et nettoyer les balises Markdown (gras, italique)
+                        raw_section = chunk.metadata[h]
+                        section = raw_section.replace("**", "").replace("*", "").replace("__", "").replace("_", "").strip()
+                    # Supprimer la clé originale pour éviter les doublons dans les métadonnées
+                    del chunk.metadata[h]
+            
+            chunk.metadata["section"] = section
 
         vector_store = get_vector_store()
         vector_store.add_documents(chunks)

@@ -15,3 +15,5 @@ langchain-text-splitters
 docx2txt
 pandas
 tabulate
+langchain-experimental
+pymupdf4llm
