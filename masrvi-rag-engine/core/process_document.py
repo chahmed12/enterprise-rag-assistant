@@ -1,5 +1,7 @@
 import os
 import re
+import shutil
+import config
 from langchain_community.document_loaders import TextLoader, Docx2txtLoader
 from langchain_core.documents import Document
 from retrieval.semantic_chunker import chunk_documents
@@ -80,5 +82,11 @@ def process_file_task(filepath: str):
     except Exception as e:
         print(f"Erreur lors de l'ingestion de {filepath}: {e}")
     finally:
+        # Sauvegarder dans corpus/ AVANT de supprimer le fichier temporaire
         if os.path.exists(filepath):
+            os.makedirs(config.CORPUS_DIR, exist_ok=True)
+            corpus_dest = os.path.join(config.CORPUS_DIR, os.path.basename(filepath))
+            # Ne copier que si le fichier source est différent du corpus (évite les rechargements)
+            if os.path.abspath(filepath) != os.path.abspath(corpus_dest):
+                shutil.copy2(filepath, corpus_dest)
             os.remove(filepath)

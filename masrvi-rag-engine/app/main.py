@@ -3,6 +3,7 @@ import shutil
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 
+import config
 from core.process_document import process_file_task
 from core.exchange import generate_answer
 from retrieval.qdrant_client import clear_collection
@@ -52,15 +53,17 @@ def ingest_document(background_tasks: BackgroundTasks, file: UploadFile = File(.
 def reload_corpus(background_tasks: BackgroundTasks):
     clear_collection()
     
-    data_dir = "data"
+    corpus_dir = config.CORPUS_DIR
     count = 0
-    if os.path.exists(data_dir):
-        for filename in os.listdir(data_dir):
-            filepath = os.path.join(data_dir, filename)
+    if os.path.exists(corpus_dir):
+        for filename in os.listdir(corpus_dir):
+            filepath = os.path.join(corpus_dir, filename)
             if os.path.isfile(filepath):
+                # On re-ingère directement depuis corpus/
+                # process_file_task ne supprimera pas le fichier car il voit qu'il est déjà dans corpus/
                 background_tasks.add_task(process_file_task, filepath)
                 count += 1
                 
     return ReloadResponse(
-        messages=f"Collection réinitialisée. {count} fichier(s) en cours de rechargement en arrière-plan."
+        messages=f"Collection réinitialisée. {count} fichier(s) en cours de rechargement depuis le corpus."
     )

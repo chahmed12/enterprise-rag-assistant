@@ -22,3 +22,7 @@ SEARCH_K = int(os.getenv("SEARCH_K", "5"))
 RELEVANCE_THRESHOLD = float(os.getenv("RELEVANCE_THRESHOLD", "0.5"))
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
+
+# ── Stockage des fichiers sources ─────────────────────────────────────────────
+# Dossier permanent qui conserve les fichiers source pour permettre le rechargement
+CORPUS_DIR = os.getenv("CORPUS_DIR", "corpus")
