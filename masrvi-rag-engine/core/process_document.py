@@ -6,7 +6,6 @@ from langchain_community.document_loaders import TextLoader, Docx2txtLoader, BSH
 from langchain_core.documents import Document
 from retrieval.semantic_chunker import chunk_documents
 from retrieval.qdrant_client import get_vector_store, delete_document
-from utils.pdf_loaders import PandasPDFLoader
 import pymupdf4llm
 
 def clean_text(text: str) -> str:
@@ -20,9 +19,7 @@ def clean_text(text: str) -> str:
 
 def get_loader(filepath: str):
     ext = os.path.splitext(filepath)[1].lower()
-    if ext == ".pdf":
-        return PandasPDFLoader(filepath)
-    elif ext in [".txt", ".md"]:
+    if ext in [".txt", ".md"]:
         return TextLoader(filepath, encoding="utf-8")
     elif ext == ".docx":
         return Docx2txtLoader(filepath)

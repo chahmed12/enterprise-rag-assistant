@@ -315,7 +315,6 @@ masrvi-rag-engine
 ├── retrieval/qdrant_client.py  Accès Qdrant (index, recherche, filtres)
 ├── retrieval/semantic_chunker.py  Découpage sémantique
 ├── utils/clients.py            Embeddings (Ollama/HF) + LLM (Groq)
-├── utils/pdf_loaders.py        Chargement PDF avec tableaux
 └── config.py                   Constantes d'environnement
 ```
 
