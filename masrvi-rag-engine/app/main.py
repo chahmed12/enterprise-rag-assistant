@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 import config
 from core.process_document import process_file_task
 from core.exchange import generate_answer
-from retrieval.qdrant_client import clear_collection
+from retrieval.qdrant_client import clear_collection, document_exists
 from app.models import QuestionRequest, AnswerResponse, IngestResponse, ReloadResponse
 
 app = FastAPI(title="Masrvi RAG Service")
@@ -31,9 +31,19 @@ def ask_question(payload: QuestionRequest):
 
 @app.post("/ingest", response_model=IngestResponse)
 def ingest_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
-    allowed_exts = (".pdf", ".txt", ".md", ".docx")
+    allowed_exts = (".pdf", ".txt", ".md", ".docx", ".html", ".htm")
     if not file.filename.lower().endswith(allowed_exts):
         raise HTTPException(status_code=400, detail="Format non supporté (PDF, TXT, MD, DOCX).")
+
+    # Garde anti-doublon : refuser uniquement si le fichier est déjà présent dans le corpus.
+    # S'il est dans Qdrant mais absent du corpus (corpus vidé), on ré-ingère pour le restaurer.
+    if document_exists(os.path.basename(file.filename)):
+        corpus_dest = os.path.join(config.CORPUS_DIR, file.filename)
+        if os.path.exists(corpus_dest):
+            return IngestResponse(
+                file_name=file.filename,
+                messages="Document déjà ingéré, aucun traitement.",
+            )
 
     os.makedirs("data", exist_ok=True)
     filepath = f"data/{file.filename}"

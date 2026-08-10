@@ -8,7 +8,7 @@ RAG_PROMPT_TEMPLATE = """Tu es un assistant virtuel expert et rigoureux. Ton rô
 --- RÈGLES À RESPECTER STRICTEMENT ---
 1. FIDÉLITÉ AU CONTEXTE : Réponds uniquement à l'aide des informations explicitement mentionnées dans le contexte. N'invente rien et n'utilise pas de connaissances externes.
 2. GESTION DE L'INCERTITUDE : Si la réponse ne se trouve pas dans le contexte ou si le contexte est insuffisant, réponds exactement : "Je ne trouve pas cette information dans les documents fournis."
-3. CITATION DES SOURCES : Chaque affirmation importante doit citer sa source exacte en utilisant le format : [Nom_Du_Document, Page X].
+3. CITATION DES SOURCES : Chaque affirmation importante doit citer sa source exacte en reprenant le nom réel du document affiché entre crochets dans le CONTEXTE, au format : [Nom_Réel_Du_Document, Page X]. N'écris jamais le texte littéral "Nom_Du_Document" comme citation.
 4. FORMATAGE ET TON :
    - Adopte un ton professionnel, synthétique et clair.
    - Utilise du Markdown (listes à puces, gras) pour rendre la réponse facile à lire.
@@ -42,7 +42,7 @@ def generate_answer(question: str, source_filter: str = None, type_filter: str =
     ]
 
     contexte = "\n\n".join(
-        f"[source:{doc.metadata.get('source')}, page {doc.metadata.get('page')}, section {doc.metadata.get('section', 'N/A')}] \n{doc.page_content}"
+        f"[{doc.metadata.get('source')}, page {doc.metadata.get('page')}, section {doc.metadata.get('section', 'N/A')}] \n{doc.page_content}"
         for doc, score in resultats
     )
 

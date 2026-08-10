@@ -1,13 +1,14 @@
 package com.masrvi.core.controller;
 
 import com.masrvi.core.client.RagEngineClient;
+import com.masrvi.core.dto.IngestResponseDTO;
+import com.masrvi.core.dto.ReloadResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Contrôleur REST pour la gestion des documents dans le moteur RAG.
@@ -27,7 +28,7 @@ public class DocumentController {
      * @return HTTP 200 OK si le rechargement a réussi.
      */
     @PostMapping("/reload")
-    public ResponseEntity<Map<?, ?>> reload() {
+    public ResponseEntity<ReloadResponseDTO> reload() {
         return ResponseEntity.ok(ragClient.reload());
     }
 
@@ -39,7 +40,7 @@ public class DocumentController {
      * @return La réponse JSON du moteur RAG Python.
      */
     @PostMapping("/ingest")
-    public ResponseEntity<Map<?, ?>> ingest(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<IngestResponseDTO> ingest(@RequestParam("file") MultipartFile file) throws IOException {
         return ResponseEntity.ok(ragClient.ingest(file));
     }
 }

@@ -1,29 +1,42 @@
 package com.masrvi.core.client;
 
+import com.masrvi.core.dto.IngestResponseDTO;
+import com.masrvi.core.dto.ReloadResponseDTO;
 import com.masrvi.core.dto.SourceDTO;
+import com.masrvi.core.exception.RagEngineException;
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.*;
+import org.springframework.http.HttpRequest;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Proxy HTTP vers le moteur RAG (FastAPI) via RestClient.
+ * Timeouts (5 s connexion / 60 s réponse) et gestion d'erreurs centralisée :
+ * toute erreur (réseau ou HTTP 4xx/5xx) est levée en RagEngineException → HTTP 503.
+ */
 @Component
 public class RagEngineClient {
 
-    @Value("${rag.engine.url}") // on supprime le :8000 de l'url, on le mettra dans application.properties pour
-                                // ne pas avoir le serveur sur le même port que le backend
-    private String ragEngineUrl;
+    private final RestClient ragRestClient;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    public RagEngineClient(RestClient ragRestClient) {
+        this.ragRestClient = ragRestClient;
+    }
 
     @Data
     public static class RagResponse {
@@ -39,7 +52,6 @@ public class RagEngineClient {
      * @param typeFilter   Filtre sur le type de document (peut être null).
      */
     public RagResponse ask(String question, String sourceFilter, String typeFilter) {
-        String url = ragEngineUrl + "/ask";
         Map<String, String> body = new HashMap<>();
         body.put("question", question);
         if (sourceFilter != null && !sourceFilter.isBlank()) {
@@ -48,29 +60,29 @@ public class RagEngineClient {
         if (typeFilter != null && !typeFilter.isBlank()) {
             body.put("type_filter", typeFilter);
         }
-        return restTemplate.postForObject(url, body, RagResponse.class);
+        return execute(ragRestClient.post()
+                .uri("/ask")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body), RagResponse.class);
     }
 
     /**
      * Demande au moteur RAG de recharger son index depuis le disque.
-     * @return La réponse JSON du moteur Python (ex: {"message": "..."}).
      */
-    public Map<?, ?> reload() {
-        String url = ragEngineUrl + "/reload";
-        return restTemplate.postForObject(url, null, Map.class);
+    public ReloadResponseDTO reload() {
+        return execute(ragRestClient.post().uri("/reload"), ReloadResponseDTO.class);
     }
 
     /**
      * Transfère un fichier vers le moteur RAG pour l'ingestion dans la base vectorielle.
      *
      * @param file Le fichier à ingérer (MultipartFile Spring).
-     * @return La réponse brute de l'API Python (Map JSON).
      */
-    public Map<?, ?> ingest(MultipartFile file) throws IOException {
-        String url = ragEngineUrl + "/ingest";
-
-        // Construction du corps multipart
+    public IngestResponseDTO ingest(MultipartFile file) throws IOException {
+        // Construction du corps multipart : une clé → liste de valeurs
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        // ByteArrayResource : octets du fichier embarqués en mémoire ; getFilename()
+        // préserve le nom original, indispensable côté Python (basename du document)
         ByteArrayResource fileResource = new ByteArrayResource(file.getBytes()) {
             @Override
             public String getFilename() {
@@ -79,11 +91,38 @@ public class RagEngineClient {
         };
         body.add("file", fileResource);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        return execute(ragRestClient.post()
+                .uri("/ingest")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(body), IngestResponseDTO.class);
+    }
 
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, Map.class);
-        return response.getBody();
+    /**
+     * Exécute la requête : les erreurs HTTP (4xx/5xx) sont levées par onStatus,
+     * les erreurs réseau/techniques sont enveloppées ici, toutes en RagEngineException.
+     */
+    private <T> T execute(RestClient.RequestHeadersSpec<?> request, Class<T> responseType) {
+        try {
+            return request.retrieve()
+                    .onStatus(this::isError, this::handleError)
+                    .body(responseType);
+        } catch (RestClientException e) {
+            throw new RagEngineException("Erreur de communication avec le moteur RAG (IA indisponible).", e);
+        }
+    }
+
+    private boolean isError(HttpStatusCode status) {
+        return status.isError();
+    }
+
+    private void handleError(HttpRequest request, ClientHttpResponse response) throws IOException {
+        HttpStatusCode status = response.getStatusCode();
+        String detail = "";
+        try (InputStream body = response.getBody()) {
+            if (body != null) {
+                detail = new String(body.readAllBytes(), StandardCharsets.UTF_8).trim();
+            }
+        }
+        throw new RagEngineException("Erreur HTTP " + status.value() + " du moteur RAG. " + detail);
     }
 }

@@ -2,10 +2,10 @@ import os
 import re
 import shutil
 import config
-from langchain_community.document_loaders import TextLoader, Docx2txtLoader
+from langchain_community.document_loaders import TextLoader, Docx2txtLoader, BSHTMLLoader
 from langchain_core.documents import Document
 from retrieval.semantic_chunker import chunk_documents
-from retrieval.qdrant_client import get_vector_store
+from retrieval.qdrant_client import get_vector_store, delete_document
 from utils.pdf_loaders import PandasPDFLoader
 import pymupdf4llm
 
@@ -26,6 +26,8 @@ def get_loader(filepath: str):
         return TextLoader(filepath, encoding="utf-8")
     elif ext == ".docx":
         return Docx2txtLoader(filepath)
+    elif ext in [".html", ".htm"]:
+        return BSHTMLLoader(filepath, open_encoding="utf-8")
     else:
         raise ValueError(f"Format non supporté : {ext}")
 
@@ -47,10 +49,12 @@ def process_file_task(filepath: str):
                 # S'il manque, on peut aussi utiliser l'index de la boucle
                 page_num = meta.get("page", len(pages) + 1)
                 
-                pages.append(Document(page_content=text, metadata={"source": filepath, "page": page_num}))
+                pages.append(Document(page_content=text, metadata={"source": os.path.basename(filepath), "page": page_num}))
         else:
             loader = get_loader(filepath)
             pages = loader.load()
+            for page in pages:
+                page.metadata["source"] = os.path.basename(filepath)
         
         # Nettoyage avant découpage
         for page in pages:
@@ -77,6 +81,9 @@ def process_file_task(filepath: str):
             
             chunk.metadata["section"] = section
 
+        # Déduplication : on supprime les anciens chunks du même document avant ré-ingestion
+        delete_document(os.path.basename(filepath))
+
         vector_store = get_vector_store()
         vector_store.add_documents(chunks)
     except Exception as e:
@@ -89,4 +96,5 @@ def process_file_task(filepath: str):
             # Ne copier que si le fichier source est différent du corpus (évite les rechargements)
             if os.path.abspath(filepath) != os.path.abspath(corpus_dest):
                 shutil.copy2(filepath, corpus_dest)
-            os.remove(filepath)
+                # On supprime uniquement le temporaire data/, jamais les fichiers de corpus/
+                os.remove(filepath)

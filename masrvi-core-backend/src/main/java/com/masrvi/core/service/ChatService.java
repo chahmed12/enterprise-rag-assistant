@@ -3,11 +3,11 @@ package com.masrvi.core.service;
 import com.masrvi.core.client.RagEngineClient;
 import com.masrvi.core.dto.*;
 import com.masrvi.core.entity.*;
-import com.masrvi.core.exception.RagEngineException;
 import com.masrvi.core.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 
@@ -40,12 +40,8 @@ public class ChatService {
         userMessage = messageRepo.save(userMessage);
 
         // 3. Appeler le RAG Engine (FastAPI) hors transaction
-        RagEngineClient.RagResponse ragResponse;
-        try {
-            ragResponse = ragClient.ask(request.question(), request.sourceFilter(), request.typeFilter());
-        } catch (Exception e) {
-            throw new RagEngineException("Erreur de communication avec le moteur RAG (IA indisponible).", e);
-        }
+        // Le client lève RagEngineException en cas d'erreur (réseau ou HTTP) → HTTP 503
+        RagEngineClient.RagResponse ragResponse = ragClient.ask(request.question(), request.sourceFilter(), request.typeFilter());
 
         // 4. Sauvegarder la réponse AI + ses sources
         Message aiMessage = Message.builder()
@@ -60,6 +56,7 @@ public class ChatService {
                             .documentName(s.documentName()) // Appel sur un record (parenthèses au lieu de get)
                             .page(s.page())
                             .section(s.section())
+                            .score(s.score())
                             .message(aiMessage)
                             .build())
                     .toList();
@@ -81,9 +78,39 @@ public class ChatService {
         List<SourceDTO> sourceDTOs = null;
         if (m.getSources() != null && !m.getSources().isEmpty()) {
             sourceDTOs = m.getSources().stream()
-                    .map(s -> new SourceDTO(s.getDocumentName(), s.getPage(), null, s.getSection()))
+                    .map(s -> new SourceDTO(s.getDocumentName(), s.getPage(), s.getScore(), s.getSection()))
                     .toList();
         }
-        return new ChatMessageDTO(m.getId(), m.getRole(), m.getContent(), sourceDTOs);
+        return new ChatMessageDTO(m.getId(), m.getRole(), m.getContent(), m.getTimestamp(), sourceDTOs);
+    }
+
+    /**
+     * Retourne la liste résumée de toutes les sessions (id, titre, date, nombre de messages).
+     */
+    @Transactional(readOnly = true)
+    public List<ChatSessionSummaryDTO> getAllSessions() {
+        return sessionRepo.findAll().stream()
+                .map(s -> ChatSessionSummaryDTO.builder()
+                        .id(s.getId())
+                        .title(s.getTitle())
+                        .createdAt(s.getCreatedAt())
+                        .messageCount(s.getMessages().size())
+                        .build())
+                .toList();
+    }
+
+    /**
+     * Retourne l'historique ordonné des messages d'une session.
+     * Lève EntityNotFoundException si la session est introuvable.
+     */
+    @Transactional(readOnly = true)
+    public List<ChatMessageDTO> getSessionMessages(Long sessionId) {
+        if (!sessionRepo.existsById(sessionId)) {
+            throw new EntityNotFoundException("La session de chat avec l'ID " + sessionId + " n'existe pas.");
+        }
+        return messageRepo.findByChatSessionIdOrderByTimestampAsc(sessionId)
+                .stream()
+                .map(this::toDTO)
+                .toList();
     }
 }

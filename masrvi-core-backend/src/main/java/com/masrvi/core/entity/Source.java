@@ -32,6 +32,10 @@ public class Source {
     @Column
     private String section;
 
+    // Le score de pertinence retourné par le moteur RAG
+    @Column
+    private Double score;
+
     // Le message (réponse IA) auquel cette source est attachée
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "message_id", nullable = false)
