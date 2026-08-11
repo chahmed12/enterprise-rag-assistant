@@ -40,7 +40,12 @@ public class DocumentController {
      * @return La réponse JSON du moteur RAG Python.
      */
     @PostMapping("/ingest")
-    public ResponseEntity<IngestResponseDTO> ingest(@RequestParam("file") MultipartFile file) throws IOException {
-        return ResponseEntity.ok(ragClient.ingest(file));
+    public ResponseEntity<IngestResponseDTO> ingest(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "department", required = false) String department,
+            @RequestParam(value = "visibility", required = false, defaultValue = "PUBLIC") String visibility,
+            @RequestParam(value = "allowedDepartments", required = false) java.util.List<String> allowedDepartments
+    ) throws IOException {
+        return ResponseEntity.ok(ragClient.ingest(file, department, visibility, allowedDepartments));
     }
 }

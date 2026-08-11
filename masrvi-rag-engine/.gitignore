@@ -62,6 +62,7 @@ Thumbs.db
 # Data & model files (projet-specific)
 zenvour/
 data/
+corpus/
 
 # Jupyter
 .ipynb_checkpoints/

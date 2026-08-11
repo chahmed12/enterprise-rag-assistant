@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 
 import config
 from core.process_document import process_file_task
@@ -24,13 +24,20 @@ def ask_question(payload: QuestionRequest):
     result = generate_answer(
         payload.question,
         source_filter=payload.source_filter,
-        type_filter=payload.type_filter
+        type_filter=payload.type_filter,
+        user_departments=payload.user_departments
     )
     return AnswerResponse(**result)
 
 
 @app.post("/ingest", response_model=IngestResponse)
-def ingest_document(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+def ingest_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    department: str = Form(None),
+    visibility: str = Form("PUBLIC"),
+    allowed_departments: str = Form(None),
+):
     allowed_exts = (".pdf", ".txt", ".md", ".docx", ".html", ".htm")
     if not file.filename.lower().endswith(allowed_exts):
         raise HTTPException(status_code=400, detail="Format non supporté (PDF, TXT, MD, DOCX).")
@@ -51,7 +58,16 @@ def ingest_document(background_tasks: BackgroundTasks, file: UploadFile = File(.
     with open(filepath, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    background_tasks.add_task(process_file_task, filepath)
+    allowed_deps = None
+    if allowed_departments:
+        allowed_deps = [d.strip() for d in allowed_departments.split(",") if d.strip()]
+
+    background_tasks.add_task(
+        process_file_task, filepath,
+        department=department,
+        visibility=visibility,
+        allowed_departments=allowed_deps,
+    )
 
     return IngestResponse(
         file_name=file.filename,

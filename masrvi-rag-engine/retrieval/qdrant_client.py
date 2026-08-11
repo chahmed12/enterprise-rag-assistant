@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import (Distance, VectorParams, Filter, FilterSelector, FieldCondition, MatchValue)
+from qdrant_client.http.models import (Distance, VectorParams, Filter, FilterSelector, FieldCondition, MatchValue, MatchAny, IsEmptyCondition, PayloadField)
 import config
 from utils.clients import get_embeddings
 import os
@@ -61,19 +61,38 @@ def document_exists(source: str) -> bool:
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Erreur lors de la vérification du document {source}: {e}")
 
-def search_passages(question: str, source_filter: str = None, type_filter: str = None):
+def search_passages(question: str, source_filter: str = None, type_filter: str = None, user_departments: list = None):
     try:
         vector_store = get_vector_store()
         
-        filter_conditions = []
+        must_conditions = []
         if source_filter:
-            filter_conditions.append(FieldCondition(key="metadata.source", match=MatchValue(value=os.path.basename(source_filter))))
+            must_conditions.append(FieldCondition(key="metadata.source", match=MatchValue(value=os.path.basename(source_filter))))
         if type_filter:
-            filter_conditions.append(FieldCondition(key="metadata.type", match=MatchValue(value=type_filter)))
-            
+            must_conditions.append(FieldCondition(key="metadata.type", match=MatchValue(value=type_filter)))
+
+        # Filtre d'accès par département :
+        # - PUBLIC (ou métadonnée absente, docs legacy) → visible par tous
+        # - DEPARTMENT → visible si le département du doc est dans ceux de l'utilisateur
+        # - RESTRICTED → visible si un département autorisé est dans ceux de l'utilisateur
+        if user_departments:
+            access_should = [
+                FieldCondition(key="metadata.visibility", match=MatchValue(value="PUBLIC")),
+                IsEmptyCondition(is_empty=PayloadField(key="metadata.visibility")),
+                Filter(must=[
+                    FieldCondition(key="metadata.visibility", match=MatchValue(value="DEPARTMENT")),
+                    FieldCondition(key="metadata.department", match=MatchAny(any=user_departments)),
+                ]),
+                Filter(must=[
+                    FieldCondition(key="metadata.visibility", match=MatchValue(value="RESTRICTED")),
+                    FieldCondition(key="metadata.allowed_departments", match=MatchAny(any=user_departments)),
+                ]),
+            ]
+            must_conditions.append(Filter(should=access_should))
+
         qdrant_filter = None
-        if filter_conditions:
-            qdrant_filter = Filter(must=filter_conditions)
+        if must_conditions:
+            qdrant_filter = Filter(must=must_conditions)
 
         return vector_store.similarity_search_with_score(question, k=config.SEARCH_K, filter=qdrant_filter)
     except Exception as e:

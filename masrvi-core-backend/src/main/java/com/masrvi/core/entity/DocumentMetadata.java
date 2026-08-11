@@ -3,6 +3,7 @@ package com.masrvi.core.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "documents")
@@ -31,6 +32,18 @@ public class DocumentMetadata {
     // Statut : "PROCESSING", "INDEXED", "ERROR"
     @Column(nullable = false)
     private String status;
+
+    @Column
+    private String department;
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    private DocumentVisibility visibility;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "document_allowed_departments", joinColumns = @JoinColumn(name = "document_id"))
+    @Column(name = "department_name")
+    private List<String> allowedDepartments;
 
     @PrePersist
     protected void onCreate() {

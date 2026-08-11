@@ -15,12 +15,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatService {
 
+    private static final String DEFAULT_USER = "anonymous";
+
     private final ChatSessionRepository sessionRepo;
     private final MessageRepository messageRepo;
     private final RagEngineClient ragClient;
 
     // Pas de @Transactional ici pour éviter de bloquer la base pendant l'appel HTTP
     public ChatResponseDTO ask(AskRequestDTO request) {
+        String createdBy = DEFAULT_USER;
+
         // 1. Récupérer ou créer la session
         ChatSession session;
         if (request.sessionId() != null) {
@@ -28,7 +32,10 @@ public class ChatService {
                     .orElseThrow(() -> new EntityNotFoundException(
                             "La session de chat avec l'ID " + request.sessionId() + " n'existe pas."));
         } else {
-            session = sessionRepo.save(ChatSession.builder().title("Session du " + java.time.LocalDate.now()).build());
+            session = sessionRepo.save(ChatSession.builder()
+                    .title("Session du " + java.time.LocalDate.now())
+                    .createdBy(createdBy)
+                    .build());
         }
 
         // 2. Sauvegarder le message USER
@@ -89,7 +96,7 @@ public class ChatService {
      */
     @Transactional(readOnly = true)
     public List<ChatSessionSummaryDTO> getAllSessions() {
-        return sessionRepo.findAll().stream()
+        return sessionRepo.findByCreatedBy(DEFAULT_USER).stream()
                 .map(s -> ChatSessionSummaryDTO.builder()
                         .id(s.getId())
                         .title(s.getTitle())
@@ -105,9 +112,9 @@ public class ChatService {
      */
     @Transactional(readOnly = true)
     public List<ChatMessageDTO> getSessionMessages(Long sessionId) {
-        if (!sessionRepo.existsById(sessionId)) {
-            throw new EntityNotFoundException("La session de chat avec l'ID " + sessionId + " n'existe pas.");
-        }
+        sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("La session de chat avec l'ID " + sessionId + " n'existe pas."));
+        
         return messageRepo.findByChatSessionIdOrderByTimestampAsc(sessionId)
                 .stream()
                 .map(this::toDTO)

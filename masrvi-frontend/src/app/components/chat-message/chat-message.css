@@ -1,0 +1,123 @@
+.message-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 82%;
+  animation: slideIn 0.3s ease;
+}
+
+.user-wrapper {
+  flex-direction: row-reverse;
+  align-self: flex-end;
+}
+
+.ai-wrapper {
+  align-self: flex-start;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Avatars ---- */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.ai-avatar {
+  background: linear-gradient(135deg, var(--primary-green), #05b586);
+  color: #fff;
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, var(--primary-yellow), #f5a623);
+  color: #fff;
+}
+
+/* ---- Message Content ---- */
+.message-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---- Bubbles ---- */
+.bubble {
+  border-radius: var(--border-radius-md);
+  padding: 12px 16px;
+  line-height: 1.6;
+}
+
+.user-bubble {
+  background: linear-gradient(135deg, var(--primary-yellow), #f5c842);
+  color: #3a2c00;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 12px rgba(255, 209, 102, 0.35);
+}
+
+.ai-bubble {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(6, 214, 160, 0.2);
+  color: var(--text-main);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.bubble-text {
+  font-size: 0.9rem;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- Sources ---- */
+.sources-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sources-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.sources-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Timestamp ---- */
+.message-time {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.user-wrapper .message-time {
+  text-align: right;
+}

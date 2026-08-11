@@ -31,7 +31,7 @@ def get_loader(filepath: str):
 
 
 
-def process_file_task(filepath: str):
+def process_file_task(filepath: str, department: str = None, visibility: str = "PUBLIC", allowed_departments: list = None):
     try:
         ext = os.path.splitext(filepath)[1].lower()
         if ext == ".pdf":
@@ -63,6 +63,14 @@ def process_file_task(filepath: str):
         clean_ext = ext.replace(".", "")
         for chunk in chunks:
             chunk.metadata["type"] = clean_ext
+
+            # Visibilité par département : enrichit chaque chunk pour permettre le
+            # filtrage d'accès côté recherche (PUBLIC / DEPARTMENT / RESTRICTED).
+            if department:
+                chunk.metadata["department"] = department
+            chunk.metadata["visibility"] = visibility
+            if allowed_departments:
+                chunk.metadata["allowed_departments"] = allowed_departments
             
             # La section est désormais automatiquement extraite par le MarkdownHeaderTextSplitter
             # On consolide cela dans la clé 'section' pour compatibilité avec l'existant.

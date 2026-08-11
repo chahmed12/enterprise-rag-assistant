@@ -31,6 +31,9 @@ public class ChatSession {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private String createdBy;
+
     // Relation 1 à N : Une session contient plusieurs messages
     @OneToMany(mappedBy = "chatSession", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

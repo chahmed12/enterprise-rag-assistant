@@ -22,8 +22,13 @@ RAG_PROMPT_TEMPLATE = """Tu es un assistant virtuel expert et rigoureux. Ton rô
 def build_prompt(question: str, contexte: str) -> str:
     return RAG_PROMPT_TEMPLATE.format(question=question, contexte=contexte)
 
-def generate_answer(question: str, source_filter: str = None, type_filter: str = None) -> dict:
-    resultats = search_passages(question, source_filter=source_filter, type_filter=type_filter)
+def generate_answer(question: str, source_filter: str = None, type_filter: str = None, user_departments: list = None) -> dict:
+    resultats = search_passages(
+        question,
+        source_filter=source_filter,
+        type_filter=type_filter,
+        user_departments=user_departments,
+    )
 
     if not resultats or resultats[0][1] < config.RELEVANCE_THRESHOLD:
         return {

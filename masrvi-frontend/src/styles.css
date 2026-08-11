@@ -1,1 +1,77 @@
-/* You can add global styles to this file, and also import other style files */
+/* Import Google Fonts - Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Color Palette - Fresh & Vibrant (Yellow, Green, White) */
+  --bg-color: #f7f9fa; /* Very subtle light grey/white background */
+  --surface-color: rgba(255, 255, 255, 0.7); /* Glassmorphism surface */
+  --surface-border: rgba(255, 255, 255, 0.4);
+  
+  --primary-yellow: #FFD166; /* Vibrant Yellow */
+  --primary-green: #06D6A0;  /* Fresh Green */
+  --accent-color: #118AB2;   /* Optional contrasting accent if needed, maybe dark text */
+  
+  --text-main: #2b2d42;      /* Dark text for readability on light backgrounds */
+  --text-muted: #6c757d;
+  
+  /* Glassmorphism Variables */
+  --glass-blur: blur(12px);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  
+  /* Layout & Sizes */
+  --sidebar-width: 320px;
+  --border-radius-lg: 16px;
+  --border-radius-md: 12px;
+  --border-radius-sm: 8px;
+  
+  --font-family: 'Inter', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden; /* Prevent body scroll, handle scrolling in components */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Base Utility Classes */
+.glass-panel {
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--border-radius-lg);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary-green), #05b586);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

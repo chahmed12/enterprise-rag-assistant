@@ -1,0 +1,46 @@
+<div class="message-wrapper" [class.user-wrapper]="isUser" [class.ai-wrapper]="!isUser">
+  <!-- AI Avatar -->
+  @if (!isUser) {
+    <div class="avatar ai-avatar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  }
+
+  <div class="message-content-wrapper">
+    <!-- Bubble -->
+    <div class="bubble" [class.user-bubble]="isUser" [class.ai-bubble]="!isUser">
+      <p class="bubble-text">{{ message.content }}</p>
+    </div>
+
+    <!-- Sources (AI only) -->
+    @if (!isUser && message.sources && message.sources.length > 0) {
+      <div class="sources-container">
+        <span class="sources-label">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Sources
+        </span>
+        <div class="sources-list">
+          @for (source of message.sources; track source.documentName) {
+            <app-source-card [source]="source" />
+          }
+        </div>
+      </div>
+    }
+
+    @if (message.timestamp) {
+      <span class="message-time">{{ message.timestamp }}</span>
+    }
+  </div>
+
+  <!-- User Avatar -->
+  @if (isUser) {
+    <div class="avatar user-avatar">U</div>
+  }
+</div>

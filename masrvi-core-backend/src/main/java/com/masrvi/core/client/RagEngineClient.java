@@ -52,7 +52,7 @@ public class RagEngineClient {
      * @param typeFilter   Filtre sur le type de document (peut être null).
      */
     public RagResponse ask(String question, String sourceFilter, String typeFilter) {
-        Map<String, String> body = new HashMap<>();
+        Map<String, Object> body = new HashMap<>();
         body.put("question", question);
         if (sourceFilter != null && !sourceFilter.isBlank()) {
             body.put("source_filter", sourceFilter);
@@ -78,7 +78,7 @@ public class RagEngineClient {
      *
      * @param file Le fichier à ingérer (MultipartFile Spring).
      */
-    public IngestResponseDTO ingest(MultipartFile file) throws IOException {
+    public IngestResponseDTO ingest(MultipartFile file, String department, String visibility, List<String> allowedDepartments) throws IOException {
         // Construction du corps multipart : une clé → liste de valeurs
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         // ByteArrayResource : octets du fichier embarqués en mémoire ; getFilename()
@@ -90,6 +90,15 @@ public class RagEngineClient {
             }
         };
         body.add("file", fileResource);
+        if (department != null) {
+            body.add("department", department);
+        }
+        if (visibility != null) {
+            body.add("visibility", visibility);
+        }
+        if (allowedDepartments != null && !allowedDepartments.isEmpty()) {
+            body.add("allowed_departments", String.join(",", allowedDepartments));
+        }
 
         return execute(ragRestClient.post()
                 .uri("/ingest")

@@ -11,6 +11,7 @@ class QuestionRequest(BaseModel):
     question: str
     source_filter: Optional[str] = None
     type_filter: Optional[str] = None
+    user_departments: Optional[List[str]] = None
 
 class AnswerResponse(BaseModel):
     reponse: str

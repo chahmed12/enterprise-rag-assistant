@@ -1,0 +1,64 @@
+<div class="chat-area">
+  <!-- Header -->
+  <header class="chat-header">
+    <div class="chat-header-info">
+      <div class="chat-status-dot"></div>
+      <h1 class="chat-title">Assistant MASRVI</h1>
+    </div>
+    <span class="chat-subtitle">Réponses fondées sur vos documents internes · Sources vérifiées</span>
+  </header>
+
+  <!-- Messages List -->
+  <div class="messages-list" #messagesList>
+    <div class="messages-container">
+      @for (msg of messages(); track msg.id) {
+        <app-chat-message [message]="msg" />
+      }
+
+      <!-- Loading Indicator -->
+      @if (isLoading()) {
+        <div class="loading-wrapper">
+          <div class="ai-avatar-small">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Input Bar -->
+  <div class="input-bar-wrapper">
+    <div class="input-bar">
+      <textarea
+        id="question-input"
+        class="question-input"
+        [(ngModel)]="question"
+        (keydown)="onKeydown($event)"
+        placeholder="Posez votre question sur vos documents internes…"
+        rows="1"
+        [disabled]="isLoading()"
+      ></textarea>
+      <button
+        id="send-btn"
+        class="send-btn"
+        (click)="onSend()"
+        [disabled]="!question().trim() || isLoading()"
+        title="Envoyer (Entrée)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <p class="input-hint">Appuyez sur <kbd>Entrée</kbd> pour envoyer · <kbd>Maj + Entrée</kbd> pour un saut de ligne</p>
+  </div>
+</div>
