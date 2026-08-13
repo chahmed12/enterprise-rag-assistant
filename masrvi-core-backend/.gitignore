@@ -51,3 +51,9 @@ Thumbs.db
 # Build output
 out/
 build/
+
+# Ignore markdown files except README
+*.md
+!README.md
+!readme.md
+!Readme.md

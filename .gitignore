@@ -1,0 +1,24 @@
+*.md
+!README.md
+!readme.md
+!Readme.md
+PLANNING_MASRVI.txt
+DOCUMENTATION.md
+rapport_pfa_masrvi.tex
+test_masrvi.sh
+
+# Fichiers sensibles et configurations locales
+.env
+.env.*
+*.properties
+*.yml
+secrets/
+credentials/
+*.pem
+*.key
+*.p12
+
+# Questions d'évaluation et rapports
+masrvi-rag-engine/scripts/evaluate_rag.py
+*report*.csv
+*eval*.csv

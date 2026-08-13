@@ -12,5 +12,6 @@ qdrant-client
 pypdf
 langchain-text-splitters
 docx2txt
-langchain-experimental
 pymupdf4llm
+ragas
+datasets

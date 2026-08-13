@@ -22,7 +22,7 @@ RAG_PROMPT_TEMPLATE = """Tu es un assistant virtuel expert et rigoureux. Ton rô
 def build_prompt(question: str, contexte: str) -> str:
     return RAG_PROMPT_TEMPLATE.format(question=question, contexte=contexte)
 
-def generate_answer(question: str, source_filter: str = None, type_filter: str = None, user_departments: list = None) -> dict:
+def generate_answer(question: str, source_filter: str = None, type_filter: str = None, user_departments: list = None, return_contexts: bool = False) -> dict:
     resultats = search_passages(
         question,
         source_filter=source_filter,
@@ -31,10 +31,13 @@ def generate_answer(question: str, source_filter: str = None, type_filter: str =
     )
 
     if not resultats or resultats[0][1] < config.RELEVANCE_THRESHOLD:
-        return {
+        res = {
             "reponse": "Je n'ai pas trouve d'information pertinente dans les documents",
             "sources": []
         }
+        if return_contexts:
+            res["contexts"] = []
+        return res
 
     sources = [
         SourceItem(
@@ -55,4 +58,7 @@ def generate_answer(question: str, source_filter: str = None, type_filter: str =
     llm = get_llm()
     reponse = llm.invoke(prompt)
 
-    return {"reponse": reponse.content, "sources": [s.model_dump() if hasattr(s, 'model_dump') else s.dict() for s in sources]}
+    res = {"reponse": reponse.content, "sources": [s.model_dump() if hasattr(s, 'model_dump') else s.dict() for s in sources]}
+    if return_contexts:
+        res["contexts"] = [doc.page_content for doc, _ in resultats]
+    return res

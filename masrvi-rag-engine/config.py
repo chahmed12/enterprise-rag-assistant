@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME", "masrvi_docs")
 
 # ── Embeddings ────────────────────────────────────────────────────────────────
