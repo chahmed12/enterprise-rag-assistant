@@ -1,0 +1,194 @@
+# =============================================================================
+#  MASRVI — Docker Compose
+#  Lance toute la stack en une seule commande : docker compose up --build
+# =============================================================================
+#
+#  Services :
+#    ┌──────────────┐   ┌──────────────┐
+#    │   postgres   │   │    qdrant    │
+#    │  (port 5432) │   │  (port 6333) │
+#    └──────┬───────┘   └──────┬───────┘
+#           │                  │
+#           └──────────────────┘
+#                    │
+#          ┌─────────▼─────────┐
+#          │   rag-engine      │  (embeddings via Groq / HuggingFace)
+#          │  FastAPI :8000    │
+#          └─────────┬─────────┘
+#                    │
+#          ┌─────────▼─────────┐
+#          │  core-backend     │
+#          │  Spring Boot :8080│
+#          └─────────┬─────────┘
+#                    │
+#          ┌─────────▼─────────┐
+#          │    frontend       │
+#          │   Angular  :4200  │
+#          └───────────────────┘
+# =============================================================================
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: masrvi-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-masrvidb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zenvour}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-masrvidb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - masrvi-net
+
+  # ── Qdrant (vector database) ─────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: masrvi-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333 || exit 1'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks:
+      - masrvi-net
+
+  # ── Ollama (embeddings locaux en conteneur) ───────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: masrvi-ollama
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull nomic-embed-text; wait"]
+    environment:
+      OLLAMA_KEEP_ALIVE: "24h"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ollama list | grep -q nomic-embed-text"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+    networks:
+      - masrvi-net
+
+  # ── RAG Engine (FastAPI Python) ──────────────────────────────────────────────
+  rag-engine:
+    build:
+      context: ./masrvi-rag-engine
+      dockerfile: Dockerfile
+    container_name: masrvi-rag-engine
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      COLLECTION_NAME: ${COLLECTION_NAME:-masrvi_docs}
+      # Embeddings 100% locaux : nomic-embed-text via Ollama (pas de PyTorch)
+      USE_OLLAMA_EMBEDDINGS: "true"
+      OLLAMA_URL: http://ollama:11434
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+      LLM_MODEL: ${LLM_MODEL:-qwen/qwen3.8-27b}
+      # Plafond de tokens de sortie : le palier gratuit Groq limite a 1000 OTPM.
+      MAX_TOKENS: ${MAX_TOKENS:-800}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-3}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      SEARCH_K: ${SEARCH_K:-5}
+      RELEVANCE_THRESHOLD: ${RELEVANCE_THRESHOLD:-0.5}
+      CHUNK_SIZE: ${CHUNK_SIZE:-1000}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-200}
+      CORPUS_DIR: /app/corpus
+    ports:
+      - "8000:8000"
+    volumes:
+      # Corpus persistant (documents ingérés)
+      - rag_corpus:/app/corpus
+      - rag_data:/app/data
+      - rag_logs:/app/logs
+    networks:
+      - masrvi-net
+
+  # ── Core Backend (Spring Boot) ───────────────────────────────────────────────
+  core-backend:
+    build:
+      context: ./masrvi-core-backend
+      dockerfile: Dockerfile
+    container_name: masrvi-core-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rag-engine:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-masrvidb}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-zenvour}
+      RAG_ENGINE_URL: http://rag-engine:8000
+      MASRVI_FRONTEND_URLS: ${MASRVI_FRONTEND_URLS:-http://localhost:4200}
+      JWT_SECRET: ${JWT_SECRET}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    networks:
+      - masrvi-net
+
+  # ── Frontend (Angular SSR) ───────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./masrvi-frontend
+      dockerfile: Dockerfile
+    container_name: masrvi-frontend
+    restart: unless-stopped
+    depends_on:
+      core-backend:
+        condition: service_healthy
+    environment:
+      PORT: "4200"
+    ports:
+      - "4200:4200"
+    networks:
+      - masrvi-net
+
+# =============================================================================
+#  Volumes persistants
+# =============================================================================
+volumes:
+  postgres_data:
+    name: masrvi-postgres-data
+  qdrant_data:
+    name: masrvi-qdrant-data
+  ollama_data:
+    name: masrvi-ollama-data
+  rag_corpus:
+    name: masrvi-rag-corpus
+  rag_data:
+    name: masrvi-rag-data
+  rag_logs:
+    name: masrvi-rag-logs
+
+# =============================================================================
+#  Réseau interne partagé
+# =============================================================================
+networks:
+  masrvi-net:
+    name: masrvi-network
+    driver: bridge

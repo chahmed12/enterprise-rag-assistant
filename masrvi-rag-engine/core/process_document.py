@@ -1,12 +1,15 @@
 import os
 import re
 import shutil
+import logging
 import config
 from langchain_community.document_loaders import TextLoader, Docx2txtLoader, BSHTMLLoader
 from langchain_core.documents import Document
 from retrieval.semantic_chunker import chunk_documents
 from retrieval.qdrant_client import get_vector_store, delete_document
 import pymupdf4llm
+
+logger = logging.getLogger("masrvi.ingest")
 
 def clean_text(text: str) -> str:
     # Nettoyage des espaces multiples
@@ -31,7 +34,11 @@ def get_loader(filepath: str):
 
 
 
-def process_file_task(filepath: str, department: str = None, visibility: str = "PUBLIC", allowed_departments: list = None):
+def process_file_task(filepath: str, department: str = None, visibility: str = "PUBLIC", allowed_departments: list = None, original_name: str = None):
+    # original_name = nom public du document (levé par les étapes d'ingestion).
+    # Il est utilisé comme identité dans le corpus, les métadonnées (metadata.source)
+    # et la déduplication. Par défaut, on retombe sur le basename (cas du reload / corpus).
+    doc_name = original_name or os.path.basename(filepath)
     try:
         ext = os.path.splitext(filepath)[1].lower()
         if ext == ".pdf":
@@ -46,12 +53,12 @@ def process_file_task(filepath: str, department: str = None, visibility: str = "
                 # S'il manque, on peut aussi utiliser l'index de la boucle
                 page_num = meta.get("page", len(pages) + 1)
                 
-                pages.append(Document(page_content=text, metadata={"source": os.path.basename(filepath), "page": page_num}))
+                pages.append(Document(page_content=text, metadata={"source": doc_name, "page": page_num}))
         else:
             loader = get_loader(filepath)
             pages = loader.load()
             for page in pages:
-                page.metadata["source"] = os.path.basename(filepath)
+                page.metadata["source"] = doc_name
         
         # Nettoyage avant découpage
         for page in pages:
@@ -87,17 +94,17 @@ def process_file_task(filepath: str, department: str = None, visibility: str = "
             chunk.metadata["section"] = section
 
         # Déduplication : on supprime les anciens chunks du même document avant ré-ingestion
-        delete_document(os.path.basename(filepath))
+        delete_document(doc_name)
 
         vector_store = get_vector_store()
         vector_store.add_documents(chunks)
     except Exception as e:
-        print(f"Erreur lors de l'ingestion de {filepath}: {e}")
+        logger.error("Ingestion échouée pour %s : %s", doc_name, e, exc_info=True)
     finally:
         # Sauvegarder dans corpus/ AVANT de supprimer le fichier temporaire
         if os.path.exists(filepath):
             os.makedirs(config.CORPUS_DIR, exist_ok=True)
-            corpus_dest = os.path.join(config.CORPUS_DIR, os.path.basename(filepath))
+            corpus_dest = os.path.join(config.CORPUS_DIR, doc_name)
             # Ne copier que si le fichier source est différent du corpus (évite les rechargements)
             if os.path.abspath(filepath) != os.path.abspath(corpus_dest):
                 shutil.copy2(filepath, corpus_dest)

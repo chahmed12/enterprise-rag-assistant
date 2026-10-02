@@ -14,8 +14,14 @@ OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")  # modèle Ollama
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
-LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.1-8b-instant")
+LLM_MODEL = os.getenv("LLM_MODEL", "qwen/qwen3.8-27b")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Le palier gratuit Groq plafonne à 1000 tokens de sortie par minute (OTPM).
+# Sans plafond explicite, l'API utilise la valeur par défaut du modèle (1625)
+# et toute requête échoue en HTTP 429.
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "800"))
+# Nombre de tentatives automatiques sur erreur transitoire (429, 5xx, timeout).
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
 
 # ── Recherche & Chunking ──────────────────────────────────────────────────────
 SEARCH_K = int(os.getenv("SEARCH_K", "5"))

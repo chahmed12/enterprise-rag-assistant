@@ -12,4 +12,10 @@ def get_embeddings():
     return HuggingFaceEmbeddings(model_name=config.EMBEDDING_MODEL)
 
 def get_llm():
-    return ChatGroq(model=config.LLM_MODEL, api_key=config.GROQ_API_KEY, temperature=0)
+    return ChatGroq(
+        model=config.LLM_MODEL,
+        api_key=config.GROQ_API_KEY,
+        temperature=0,
+        max_tokens=config.MAX_TOKENS,
+        max_retries=config.LLM_MAX_RETRIES,
+    )

@@ -1,17 +1,18 @@
-*.md
+# *.md  (commenté pour permettre la documentation projet)
 !README.md
 !readme.md
 !Readme.md
+!DEPLOYMENT.md
+!PRESENTATION_STAGE.md
+!GUIDE_EXECUTION.md
 PLANNING_MASRVI.txt
 DOCUMENTATION.md
 rapport_pfa_masrvi.tex
-test_masrvi.sh
 
 # Fichiers sensibles et configurations locales
 .env
 .env.*
-*.properties
-*.yml
+!.env.example
 secrets/
 credentials/
 *.pem
@@ -19,6 +20,6 @@ credentials/
 *.p12
 
 # Questions d'évaluation et rapports
-masrvi-rag-engine/scripts/evaluate_rag.py
+# masrvi-rag-engine/scripts/evaluate_rag.py
 *report*.csv
 *eval*.csv
